@@ -80,24 +80,32 @@ def funnyFunction(pos, ray, sun_dir):
         funGradient = (ray-vec3(0.5,0,0))*0.5+vec3(0.5,0.5,0.5)
     return funGradient
 
-# notice every function needs @ti.func so it can run in the kernel
+# seriousFunction is a copy of funnyFunction, but it actually renders the planet and atmosphere
 @ti.func
 def seriousFunction(pos, ray, sun_dir):
+    #planet
     hit_planet_pos, collided_planet, _, _ = cast_ray_against_oblate_spheroid(pos, ray, EARTH_RADIUS_KM, EARTH_RADIUS_KM)
+    #planet+atmosphere
     hit_p_or_o_pos, collided_atmos_or_planet, hit_p_or_o_pos2, collided_atmos_or_planet2 = cast_ray_against_oblate_spheroid(pos, ray, EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM, EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM)
 
-#if !collided_planet && collided_atmos_or_planet --> dist(hit_p_or_o_pos, hit_p_or_o_pos2) psuedo code
-
-    out = vec3(0,0,0)
-
-    black = vec3(0,0,0)
-    white = vec3(.5,.5,.5)
-
+ 
+    out = vec3(0,0,0) #default return black, since this is the color of space
+    
+    #if !collided_planet && collided_atmos_or_planet --> lerp(atmosphere, planet, dist(hit_p_or_o_pos, hit_p_or_o_pos2).normalized());
     if (not collided_planet and collided_atmos_or_planet): 
         delta = hit_p_or_o_pos - hit_p_or_o_pos2
-        dist = ti.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / (EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM)
+        dist = ti.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z)
+        
+        maxDist = 2 * ti.sqrt(ti.pow(EARTH_RADIUS_KM + ATMOSPHERE_THICKNESS_KM, 2) - EARTH_RADIUS_KM*EARTH_RADIUS_KM)
+        normalizedDist = dist / maxDist
+
         col = _earth_color(pos, ray, sun_dir, hit_p_or_o_pos)
-        out += _lerp(black, col, dist)
+        out += _lerp(out, col, normalizedDist) 
+        #math people never finished with the whole equation business... 
+        #so bandaid lerp-based-on-distance solution it is
+
+    #this was our first attempt
+    #didn't go so well
 
     # return out
     
