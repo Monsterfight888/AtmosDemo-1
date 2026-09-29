@@ -16,5 +16,9 @@ pip install pillow
 
 ```python demo.py``` will create output.png and debug.png  
 
-output.png will be considered for physics and accuracy
+output.png will be considered for physics and accuracy  
 debug.png will be considered for artwork
+
+# Submission
+Sep 28th submissions: https://docs.google.com/forms/d/e/1FAIpQLSfw_b8JfjH_zkZWS_wRA3CNh1bpssZlckjyY5eaup9lfFc7Kg/viewform?usp=dialog
+Oct 1st submissions: TBD
