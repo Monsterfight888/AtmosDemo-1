@@ -80,15 +80,50 @@ def funnyFunction(pos, ray, sun_dir):
         funGradient = (ray-vec3(0.5,0,0))*0.5+vec3(0.5,0.5,0.5)
     return funGradient
 
+# notice every function needs @ti.func so it can run in the kernel
+@ti.func
+def seriousFunction(pos, ray, sun_dir):
+    hit_planet_pos, collided_planet, _, _ = cast_ray_against_oblate_spheroid(pos, ray, EARTH_RADIUS_KM, EARTH_RADIUS_KM)
+    hit_p_or_o_pos, collided_atmos_or_planet, hit_p_or_o_pos2, collided_atmos_or_planet2 = cast_ray_against_oblate_spheroid(pos, ray, EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM, EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM)
+
+#if !collided_planet && collided_atmos_or_planet --> dist(hit_p_or_o_pos, hit_p_or_o_pos2) psuedo code
+
+    out = vec3(0,0,0)
+
+    black = vec3(0,0,0)
+    white = vec3(.5,.5,.5)
+
+    if (not collided_planet and collided_atmos_or_planet): 
+        delta = hit_p_or_o_pos - hit_p_or_o_pos2
+        dist = ti.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / (EARTH_RADIUS_KM+ATMOSPHERE_THICKNESS_KM)
+        col = _earth_color(pos, ray, sun_dir, hit_p_or_o_pos)
+        out += _lerp(black, col, dist)
+
+    # return out
+    
+    # if (collided_planet):
+    #     # hit_dir = atmosphereHitPosition.normalized()
+    #     # # notice you can sometimes get weird behavior when there's negative values
+    #     # funGradient = (hit_dir*0.5+vec3(0.5,0.5,0.8)) * max(dot(hit_dir, sun_dir),0.05) + _earth(pos, ray, sun_dir)*vec3(0.5,0.5,0.7) + vec3(0.05,0.02,0.05)
+    #     # return vec3(0,0,0)?
+    #     out.x = 0.5
+    # elif(collided_atmos_or_planet):
+    #     out.y = 0.5
+
+    return out
+@ti.func
+def _lerp(a,b,t):
+    return a + t * (b-a)
+
 # the main function that demo.py calls to get the color of the atmosphere at a certain pixel
 @ti.func
 def _atmos(pos, ray, sun_dir):
 
     funGradient = funnyFunction(pos, ray, sun_dir)
-    black = vec3(0,0,0)
+    seriousGradient = seriousFunction(pos,ray, sun_dir)
 
     # return the color, then a debug color
-    return black, funGradient
+    return seriousGradient, funGradient
 
 
 # Used by demo.py
@@ -97,13 +132,20 @@ def _atmos(pos, ray, sun_dir):
 # A simple earth helps the judges see your atmosphere more clearly
 #
 # Feel free to play with it if you're making an art piece
+
+@ti.func
+def _earth_color(pos, direction, sun_dir, surface_km):
+    surface_dir = surface_km.normalized()
+    ndotl = max(surface_dir.dot(sun_dir),0)
+    col = vec3(0,0,0)
+    if ndotl >= 0.0:
+        col = vec3(0.7,0.7,1)*ndotl*0.5
+    return col
+
 @ti.func
 def _earth(pos, direction, sun_dir):
     surface_km, hit, _, _ = cast_ray_against_oblate_spheroid(pos, direction, EARTH_RADIUS_KM, EARTH_RADIUS_KM)
     color = vec3(0,0,0)
     if hit:
-        surface_dir = surface_km.normalized()
-        ndotl = max(surface_dir.dot(sun_dir),0)
-        if ndotl >= 0.0:
-            color = vec3(0.7,0.7,1)*ndotl*0.5
+        color = _earth_color(pos, direction, sun_dir, surface_km)
     return color

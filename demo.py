@@ -70,7 +70,7 @@ TCP = np.linalg.matrix_transpose(TPC)
 
 # position in world coords (KM); you can play with this one if you'd like
 # if you get lost come back to [-30000, 0, 0]
-rp = np.array([-30000,600,500])
+rp = np.array([-30000,0,0])
 # position in camera coords
 rc = TPC.dot(rp)
 #############################################
